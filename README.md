@@ -25,13 +25,13 @@ This process is fairly straightforward. We just bunch together every so many pix
 
 Each node has a feature vector comprising of the elements:
 - The average Y-component of the pixel group
-- The average Cb-component
-- The average Cr-component
-- The orientation entropy Eρ1 at a scaling of 0.5
-- The orientation entropy Eρ2 at a scaling of 1
-- The orientation entropy Eρ3 at a scaling of 1.5
-- The orientation entropy Eρ4 at a scaling of 2
-- The orientation entropy Eρ5 at a scaling of 2.5
+- The average C<sub>b</sub>-component
+- The average C<sub>r</sub>-component
+- The orientation entropy E<sub>ρ1</sub> at a scaling of 0.5
+- The orientation entropy E<sub>ρ2</sub> at a scaling of 1
+- The orientation entropy E<sub>ρ3</sub> at a scaling of 1.5
+- The orientation entropy E<sub>ρ4</sub> at a scaling of 2
+- The orientation entropy E<sub>ρ5</sub> at a scaling of 2.5
 
 The orientation entropy itself is defined in terms of the orientation histogram and the scalings refer to the variances of the gaussian kernels convoluted with the image in order to capture the image complexity at different scales and reduce the dependency of the feature vector on the size of the pixel group. Refer to the aforementioned papers, and to http://en.wikipedia.org/wiki/Scale\_space for more information.
 
