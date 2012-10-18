@@ -1,4 +1,4 @@
-#!/bin/python
+#!/usr/bin/env python
 
 from scipy import *
 from scipy.linalg import *
