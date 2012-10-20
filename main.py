@@ -5,36 +5,28 @@ from scipy.linalg import *
 from scipy.ndimage import *
 from numpy.fft import fft2, ifft2, fftshift
 from scipy.signal import convolve2d as conv
+from scipy.special import *
 import matplotlib.pyplot as plt
+from time import clock
 import networkx as nx
 import Image
 
 '''
-We need to decide what comprises our feature vector. We can use:
-1. RGB intensities
-2. Gradient of the patch. Hence we need to decide patch size also
-3. Position of the patch in the image. Because we can say that patches
-   which are spacially close tend to be more similar.
-4. I am not sure, but we could use fourier transform also, since frequency
-   content tend to be same.
+As of now, we have frozen the following features:
+1. Y
+2. Cb
+3. Cr
+4. Entropy at 1:1 scale.
+5. Position
 
-There is not hard and fast rule, but we could use 8x8 pixels as a patch
-Once we are done with these parameters, we need to create edges. I suggest
-creating weighted network, weight being proportional to how similar the patches
-are. Once again, we need to quantify what we mean by similar patches.
-
-Once we have a weighted network, we could go ahead and calculate centralities.
-Not that this is just for the sake of doing it, but because I feel that every
-object has a single node which has high centrality.
-
-Then, the final part is to do a community detection. However, if we know for
-sure that we will have X nodes which have high centrality, we could as well
-do graph partitioning.
+For the entropy, we need the orientation histogram. We will use simple sobel
+operator to find the gradient at each point and construct the histogram with
+9 channels of angles.
 
 '''
 PATCH_SIZE = 8
 
-im = imread('template.jpg')
+im = imread('template1.jpg')
 imR = im[:,:,0]
 imG = im[:,:,1]
 imB = im[:,:,2]
@@ -58,6 +50,13 @@ imB = imB[:xdim, :ydim]
 iterx = xdim / PATCH_SIZE
 itery = ydim / PATCH_SIZE
 fvector = []
+
+kernx = array([-1, 0, 1,
+               -1, 0, 1,
+               -1, 0, 1]).reshape(3,3)
+kerny = array([-1, -1, -1,
+                0,  0,  0,
+                1,  1,  1]).reshape(3,3)
 for i in range(iterx):
     for j in range(itery):
         x1 = i * PATCH_SIZE
@@ -69,40 +68,96 @@ for i in range(iterx):
         imchunkG = imG[x1:x2, y1:y2]
         imchunkB = imB[x1:x2, y1:y2]
 
-        # Our first features will be average R, G, B values
+        # Our first features will be Y, Cb, Cr values
         Rval = sum(imchunkR) / (PATCH_SIZE*PATCH_SIZE)
         Gval = sum(imchunkG) / (PATCH_SIZE*PATCH_SIZE)
         Bval = sum(imchunkB) / (PATCH_SIZE*PATCH_SIZE)
 
+        # Calculation of Y Cb Cr from R G B is from wikipedia:
+        # http://en.wikipedia.org/wiki/YCbCr
+        Y = 0.229*Rval + 0.587*Gval + 0.114*Bval
+        Cb = 128 - 0.168763*Rval - 0.331264*Gval - 0.5*Bval
+        Cr = 128 + 0.5*Rval - 0.418688*Gval - 0.081312*Bval
+
         # Next feature should be the position of the patch
         xpos = (x1 + x2)/2
         ypos = (y1 + y2)/2
+        pos = [xpos, ypos]
 
-        # We can take a fourier transform and find the maximum frequency.
-        # This would tell us how non uniform is our image.
+        # We need to now calculate the orientation histogram. We will use
+        # differentiation operator for the same
+        imchunk = (imchunkR + imchunkG + imchunkB)/3
+        imx = conv(imchunk, kernx)
+        imy = conv(imchunk, kerny)
+        grad = 180 + 180*arctan2(imy, imx)/3.1415926
 
-        IMR = abs(fft2(imchunkR))
-        IMG = abs(fft2(imchunkG))
-        IMB = abs(fft2(imchunkB))
+        # We will now segregate our gradient map into bins
+        bin_len_l = 0
+        bin_len_h = 0
+        hist = []
+        for i in range(9):
+            bin_len_l = bin_len_h
+            bin_len_h += 40
+            x, y = where((imchunk <= bin_len_h)*(imchunk > bin_len_l))
+            hist.append(len(x))
+        H = array(hist)
+        x = where(H == 0)
+        H[x] = 1
 
-        FXR, FYR = where(IMR == IMR.max())
-        FXG, FYG = where(IMG == IMG.max())
-        FXB, FYB = where(IMB == IMB.max())
+        # Entropy formula is emperical(For us!)
+        entropy = sum(H * log(H))
 
-        # Spacial comparision will connect nearby neighbours. However,
-        # frequency content comparision may connect two plane areas. Not sure
-        # how to avoid that thing. Anyways, I am not sure that would matter,
-        # since our weights should take care of that.
+        fvector.append([Y, Cb, Cr, pos, entropy])        
 
-        # As of now, create the feature vector.
-        
-        fvector.append([[Rval, Gval, Bval], [xpos, ypos],
-                        [[FXR, FYR], [FXG, FYG], [FXB, FYB]]])
-
+t1 = clock()
 node_count = len(fvector)
 imgraph = nx.Graph()
 for i in range(node_count):
     node_name = 'node_'+str(i)
-    Cval, pos, FFT = fvector[i]
-    imgraph.add_node(i, Cval=Cval, pos=pos, FFT=FFT)
+    Y, Cb, Cr, pos, entropy = fvector[i]
+    imgraph.add_node(i, Y=Y, Cb = Cb, Cr = Cr,
+                     pos=pos, entropy=entropy)
+
+# We have created our nodes. Now we need to create edges. We can start off by
+# saying that weight is proportional to exp(-distance). This will ensure that
+# farther nodes have as less weight as possible.
+
+# As of now, we will create a clique out of the whole graph
+
+for i in range(node_count):
+    for j in range(i, node_count):
+        
+        Y1 = imgraph.node[i]['Y']
+        Y2 = imgraph.node[j]['Y']
+        Cb1 = imgraph.node[i]['Cb']
+        Cb2 = imgraph.node[j]['Cb']
+        Cr1 = imgraph.node[i]['Cr']
+        Cr2 = imgraph.node[j]['Cr']
+        x1,y1 = imgraph.node[i]['pos']
+        x1,y1 = imgraph.node[j]['pos']
+        E1 = imgraph.node[i]['entropy']
+        E2 = imgraph.node[j]['entropy']
+
+        v1 = array([Y2-Y1, Cb2-Cb1, Cr2-Cr1, E2-E1])
+        weight = exp(-1 * dot(v1, v1.T))
+        imgraph.add_edge(i, j, weight=weight)
     
+t2 = clock()
+print t2-t1
+import community
+partition = community.best_partition(imgraph)
+
+#drawing
+size = float(len(set(partition.values())))
+pos = nx.spring_layout(imgraph)
+count = 0.
+for com in set(partition.values()) :
+    count = count + 1.
+    list_nodes = [nodes for nodes in partition.keys()
+                                if partition[nodes] == com]
+    nx.draw_networkx_nodes(imgraph, pos, list_nodes, node_size = 20,
+                                node_color = str(count / size))
+
+
+nx.draw_networkx_edges(imgraph,pos, alpha=0.5)
+plt.show()
