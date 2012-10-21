@@ -8,7 +8,6 @@ import scipy as sp
 import numpy as np
 import scipy.ndimage as ni
 import networkx as nx
-import itertools
 
 FEATURE_VECTOR_SIZE = 7
 NUM_HISTOGRAM_BUCKETS = 18 # This value actually has to be chosen carefully.
@@ -109,10 +108,11 @@ def _create_edges(graph):
     Creates the edges of the graph by setting the weights of connected nodes
     """
     n = graph.number_of_nodes()
+    nodes = graph.nodes(data = True)
     for i in range(n):
         for j in range(i+1, n):
-            diff_vector = (  graph.node[i]['feature_vector'] 
-                           - graph.node[j]['feature_vector'] )
+            diff_vector = (  nodes[i][1]['feature_vector']
+                           - nodes[j][1]['feature_vector'] )
             weight = sp.exp(-sp.dot(diff_vector, diff_vector))
             graph.add_edge(i, j, weight=weight)
 
@@ -205,4 +205,6 @@ def create_graph(pil_image, pixel_group_size=8):
     _create_edges(graph)
     print 'Done creating edges'
     
+    return graph
+
 create_graph(Image.open('template.jpg'))
