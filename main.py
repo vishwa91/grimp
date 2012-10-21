@@ -17,20 +17,6 @@ NUM_HISTOGRAM_BUCKETS = 18 # This value actually has to be chosen carefully.
                            # having 0. Then, when we take log(histogram), that
                            # instance will go to negative infinity!
 
-#TODO: this can be removed as it is not being used.
-class HashableNdarray(object):
-    """
-    Wrapper class around ``feature_vector`` in order to make it hashable.
-    numpy.ndarrays are not hashable, but they must be in order to make them
-    into a node on a networkx.Graph.
-    """
-    # User defined classes are hashable by default. They compare unequal with
-    # any object but themselves and their hash value is their id.
-    # http://docs.python.org/reference/datamodel.html#object.__hash__
-    
-    def __init__(self, feature_vector):
-        self.feature_vector = feature_vector
-
 def _create_feature_vector(pixel_group):
     """
     Generates the feature vector, given a square bunch of pixels.
