@@ -1,11 +1,14 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+import sys
+
 import Image
 import scipy as sp
 import numpy as np
 import scipy.ndimage as ni
 import networkx as nx
+import itertools
 
 FEATURE_VECTOR_SIZE = 7
 NUM_HISTOGRAM_BUCKETS = 18 # This value actually has to be chosen carefully.
@@ -14,14 +17,20 @@ NUM_HISTOGRAM_BUCKETS = 18 # This value actually has to be chosen carefully.
                            # having 0. Then, when we take log(histogram), that
                            # instance will go to negative infinity!
 
-def _to_polar(grid):
+#TODO: this can be removed as it is not being used.
+class HashableNdarray(object):
     """
-    Converts a grid of values into a set of complex numbers. The magnitude of
-    the complex number is the value present in the grid. The angle of the
-    complex number represents the angle of its position with respect to the
-    centre of the grid.
+    Wrapper class around ``feature_vector`` in order to make it hashable.
+    numpy.ndarrays are not hashable, but they must be in order to make them
+    into a node on a networkx.Graph.
     """
+    # User defined classes are hashable by default. They compare unequal with
+    # any object but themselves and their hash value is their id.
+    # http://docs.python.org/reference/datamodel.html#object.__hash__
     
+    def __init__(self, feature_vector):
+        self.feature_vector = feature_vector
+
 def _create_feature_vector(pixel_group):
     """
     Generates the feature vector, given a square bunch of pixels.
@@ -40,11 +49,13 @@ def _create_feature_vector(pixel_group):
     
     # Create histrogram buckets and find indices of the spectrum array that
     # fall into a particular bucket
-    bucket = sp.arange(-180, 180, 180/NUM_HISTOGRAM_BUCKETS)
+    diff = -360/NUM_HISTOGRAM_BUCKETS
+    buckets = sp.arange(180, -180+diff, diff)
     indices = {}
-    #for i in range(0, NUM_HISTOGRAM_BUCKETS):
-    #    indices[bucket[i]] = sp.where(angle >= bucket[i][0] and
-    #                                  angle < bucket[i+1][0]    )
+    for i in range(0, NUM_HISTOGRAM_BUCKETS):
+        indices[i] = sp.where((angle <= buckets[i]) * 
+                              (angle > buckets[i+1]) )
+    buckets = buckets[:-1]
     
     # Average out the Cb and Cr components and add it to the feature vector
     feature_vector[0] = sp.dot(sp.ones((1, num_pixels)), 
@@ -54,21 +65,38 @@ def _create_feature_vector(pixel_group):
                                pixel_group[1].dot(sp.ones((num_pixels, 1))))
     feature_vector[1] /= num_pixels * num_pixels
     
-    # For the remaining 5 elements, we need to first find the Fourier transform
-    for i in range(2, FEATURE_VECTOR_SIZE+1):
+    # The other five elements are the orientation entropies at different scales
+    for i in range(2, FEATURE_VECTOR_SIZE):
         # First calculate the centre-shifted fourier transform of the pixel
         # group, and then apply a log transformation to get the magnitude
         # spectrum
         transformed_pixel_group = np.fft.fft2(pixel_group[i])
         centre_shifted_pixel_group = np.fft.fftshift(transformed_pixel_group)
         fourier_spectrum = sp.log(abs(centre_shifted_pixel_group) + 1)
-        # fourier_spectrum_polar = _to_polar(fourier_spectrum)
         
-        #TODO
-        # feature_vector[i] = 
+        # Calculate the orientation histogram of the log magnitude spectrum
+        # by summing over groups of angles. The histogram value at a given
+        # angle should give the power in the log magnitude spectrum around that
+        # angle (approximately)
+        histogram = sp.empty(buckets.shape)
+        for j in range(NUM_HISTOGRAM_BUCKETS):
+            histogram[j] = fourier_spectrum[indices[j]].sum()
+        
+        # Finally, calculate the orientation entropy based on the standard
+        # statistical formula:
+        #       E = H(θ) * log(H(θ))
+        if not histogram.all():
+            entropy = 0
+        else:
+            entropy = - (histogram * sp.log(histogram)).sum()
+        if sp.isnan(entropy):
+            print histogram
+            print fourier_spectrum
+            sys.exit(1)
+        feature_vector[i] = entropy
     
-    return 0
-    
+    return feature_vector
+
 def _create_nodes(source, graph, patches):
     """
     Creates nodes from a source vector and a patch set and adds them to a graph
@@ -85,10 +113,21 @@ def _create_nodes(source, graph, patches):
     """
     
     # Iterate over the patches and apply them to the source vector
+    i = 0
     for patch in patches:
-        # XXX ndarray cannot be added to the graph as a node because it is 
-        # unhasahble!! Need to find a way around this...
-        graph.add_node(_create_feature_vector(source[patch]))
+        graph.add_node(i, feature_vector=_create_feature_vector(source[patch]))
+        i += 1
+
+def _create_edges(graph):
+    """
+    Creates the edges of the graph by setting the weights of connected nodes
+    """
+    n = graph.number_of_nodes()
+    for i in range(n):
+        for j in range(i+1, n):
+            weight = sp.exp( - (graph.node[i]['feature_vector']  
+                                - graph.node[j]['feature_vector']) ** 2 )
+            graph.add_edge(i, j, weight=weight)
 
 def _scale_image(image, scaling):
     """
@@ -170,11 +209,13 @@ def create_graph(pil_image, pixel_group_size=8):
                           ))
             j += pixel_group_size
         i += pixel_group_size
-    
     print 'Done making patches'
     
-    # Now we proceed to actually creating the graph, starting from its nodes.
+    # Now we proceed to actually create the graph
     graph = nx.Graph()
     _create_nodes(source, graph, patches)
+    print 'Done creating nodes'
+    _create_edges(graph)
+    print 'Done creating edges'
     
 create_graph(Image.open('template.jpg'))
