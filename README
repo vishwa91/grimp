@@ -1,1 +1,27 @@
-Vader, fill this. 
+Grimp stands for Graph based Image Processing. This is a part of the course "Networks: Models, theory and algorithms" in IIT Madras.
+
+The aim of the project is to use community partition to separate objects in an image. The project is inspired from http://www3.ntu.edu.sg/home/ASDRajan/cvpr09.pdf. There is another branch in this repo, random-walk which tries to implement object detection using random walk.
+
+This project has the following dependent packages:
+1. Scipy and numpy
+2. networkx(latest version as of october 2012)
+
+The procedure for detections is as follows:
+1. First, we create a graph out of the image. Each node is a 8x8 patch in the image. Each node will have a certain feature vector. This feature vector will be used to give weight to the edges.
+2. We will partition the graph into communities, which are supposed to represent objects in the image. 
+
+The features of an image chosen are:
+1. Y value
+2. Cb value
+3. Cr value
+4. Position of the patch in the image
+5. Entropy of the image
+
+The Entropy of an image depends on the orientation histogram of the image. For this, we calculate the gradient at every point of the patch. We create a histogram of the gradients, dividing it into 9 channels(The choice of 9 channels is from Wikipedia article: http://en.wikipedia.org/wiki/Histogram_of_oriented_gradients)
+   Once we have our histogram, the calculation of entropy is:
+                  Entropy = sum(H(theta) * log(H(theta)))
+Where H(theta) is the frequency of occurance of theta.
+
+We then calculate our weight between each node using the features. The weight decreases exponentially as the features differ.
+
+As of now, the simple partition is not helping. Need to tweak it to start detecting objects.
