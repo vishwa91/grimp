@@ -125,8 +125,9 @@ def _create_edges(graph):
     n = graph.number_of_nodes()
     for i in range(n):
         for j in range(i+1, n):
-            weight = sp.exp( - (graph.node[i]['feature_vector']  
-                                - graph.node[j]['feature_vector']) ** 2 )
+            diff_vector = (  graph.node[i]['feature_vector'] 
+                           - graph.node[j]['feature_vector'] )
+            weight = sp.exp(-sp.dot(diff_vector, diff_vector))
             graph.add_edge(i, j, weight=weight)
 
 def _scale_image(image, scaling):
