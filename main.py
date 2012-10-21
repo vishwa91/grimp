@@ -26,7 +26,7 @@ operator to find the gradient at each point and construct the histogram with
 '''
 PATCH_SIZE = 8
 
-im = imread('template.jpg')
+im = imread('images.jpg')
 imR = im[:,:,0]
 imG = im[:,:,1]
 imB = im[:,:,2]
