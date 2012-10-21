@@ -26,7 +26,7 @@ operator to find the gradient at each point and construct the histogram with
 '''
 PATCH_SIZE = 8
 
-im = imread('template1.jpg')
+im = imread('template.jpg')
 imR = im[:,:,0]
 imG = im[:,:,1]
 imB = im[:,:,2]
@@ -139,14 +139,17 @@ for i in range(node_count):
         E2 = imgraph.node[j]['entropy']
 
         v1 = array([Y2-Y1, Cb2-Cb1, Cr2-Cr1, E2-E1])
-        weight = exp(-1 * dot(v1, v1.T))
-        imgraph.add_edge(i, j, weight=weight)
+        weight = exp(-1 * dot(v1, v1.T)) * 100 / hypot(x2-x1, y2-y1)
+        if weight > 10e-80:
+            #print weight
+            imgraph.add_edge(i, j, weight=weight)
     
 t2 = clock()
 print t2-t1
+
 import community
 partition = community.best_partition(imgraph)
-
+'''
 #drawing
 size = float(len(set(partition.values())))
 pos = nx.spring_layout(imgraph)
@@ -161,3 +164,29 @@ for com in set(partition.values()) :
 
 nx.draw_networkx_edges(imgraph,pos, alpha=0.5)
 plt.show()
+'''
+components = nx.connected_components(imgraph)
+bounding_box = []
+im1 = copy(im)
+for c in components:
+    x1, y1 = imgraph.node[c[0]]['pos']
+    x2, y2 = imgraph.node[c[0]]['pos']
+    for node_index in c:
+        x, y = imgraph.node[node_index]['pos']
+        if (x < x1) or (y < y1):
+            x1 = x
+            y1 = y
+        elif (x > x2) or (y > y2):
+            x2 = x
+            y2 = y
+        im1[x,y,:] = 255
+    bounding_box.append([x1, y1, x2, y2])
+
+for bound in bounding_box:
+    x1, y1, x2, y2 = bound
+    im[x1:x2, y1, :] = 0
+    im[x1:x2, y2, :] = 0
+    im[x1, y1:y2, :] = 0
+    im[x2, y1:y2, :] = 0
+Image.fromarray(im).convert('RGB').save('attempt1.jpg')
+
