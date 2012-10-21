@@ -149,7 +149,7 @@ print t2-t1
 
 import community
 partition = community.best_partition(imgraph)
-'''
+
 #drawing
 size = float(len(set(partition.values())))
 pos = nx.spring_layout(imgraph)
@@ -161,10 +161,9 @@ for com in set(partition.values()) :
     nx.draw_networkx_nodes(imgraph, pos, list_nodes, node_size = 20,
                                 node_color = str(count / size))
 
-
 nx.draw_networkx_edges(imgraph,pos, alpha=0.5)
 plt.show()
-'''
+
 components = nx.connected_components(imgraph)
 bounding_box = []
 im1 = copy(im)
