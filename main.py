@@ -76,8 +76,6 @@ def create_feature_vector(im, patch_size=8):
             imchunkY = imY[x1:x2, y1:y2]
             imchunkCb = imCb[x1:x2, y1:y2]
             imchunkCr = imCr[x1:x2, y1:y2]
-            k = str(i*iterx + j)
-            Image.fromarray(imchunkY).convert('L').save('images/im_'+k+'.jpg')
 
             # Calculation of Y Cb Cr from R G B is from wikipedia:
             # http://en.wikipedia.org/wiki/YCbCr
@@ -146,7 +144,8 @@ def create_graph(fvector):
             E2 = imgraph.node[j]['entropy']
 
             v1 = array([Y2-Y1, Cb2-Cb1, Cr2-Cr1, E2-E1])
-            weight = exp(-1 * dot(v1, v1.T)) * 100 / (1+hypot(x2-x1, y2-y1))
+            #weight = exp(-1 * dot(v1, v1.T)) * 100 / (1+hypot(x2-x1, y2-y1))
+            weight = exp(-1 * dot(v1, v1.T))
             if weight > 10e-80:
                 #print weight
                 imgraph.add_edge(i, j, weight=weight)
@@ -191,7 +190,7 @@ def save_partition_snapshot(imgraph, partition):
     nx.draw_networkx_edges(imgraph,pos, alpha=0.5)
     plt.savefig('images/partition_snapshot.png')
     
-im = imread('template1.jpg')
+im = imread('flower.jpg')
 im_processed = process_image(im)
 fvector = create_feature_vector(im_processed)
 imgraph = create_graph(fvector)
@@ -206,15 +205,18 @@ for group in comm:
         pos.append([x, y])
     positions.append(pos)
 
+count = 0
 for t in positions:
     t = array(t)
     x1 = min(t[:,0])
     x2 = max(t[:,0])
     y1 = min(t[:,1])
     y2 = max(t[:,1])
-    
+    im1 = copy(im)
     im[x1:x2, y1] = 0
     im[x1:x2, y2] = 0
     im[x1, y1:y2] = 0
     im[x2, y1:y2] = 0
+    Image.fromarray(im1).convert('RGB').save('images/im'+str(count)+'.jpg')
+    count += 1
 Image.fromarray(im).show()
