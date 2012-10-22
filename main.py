@@ -17,8 +17,7 @@ def process_image(im, patch_size=8):
     This routine will process the image and return the separate channels. The
     channels will be Y, Cb, Cr. This routine is used by create_feature_vector.
     """
-
-    im = imread('template1.jpg')
+    
     imR = im[:,:,0]
     imG = im[:,:,1]
     imB = im[:,:,2]
@@ -77,6 +76,8 @@ def create_feature_vector(im, patch_size=8):
             imchunkY = imY[x1:x2, y1:y2]
             imchunkCb = imCb[x1:x2, y1:y2]
             imchunkCr = imCr[x1:x2, y1:y2]
+            k = str(i*iterx + j)
+            Image.fromarray(imchunkY).convert('L').save('images/im_'+k+'.jpg')
 
             # Calculation of Y Cb Cr from R G B is from wikipedia:
             # http://en.wikipedia.org/wiki/YCbCr
@@ -100,7 +101,7 @@ def create_feature_vector(im, patch_size=8):
             bin_len_l = 0
             bin_len_h = 0
             hist = []
-            for i in range(9):
+            for k in range(9):
                 bin_len_l = bin_len_h
                 bin_len_h += 40
                 x, y = where((imchunk <= bin_len_h)*(imchunk > bin_len_l))
@@ -122,8 +123,7 @@ def create_graph(fvector):
     node_count = len(fvector)
     imgraph = nx.Graph()
     for i in range(node_count):
-        node_name = 'node_'+str(i)
-        Y, Cb, Cr, pos, entropy = fvector[i]
+        Y, Cb, entropy, pos, Cr = fvector[i]
         imgraph.add_node(i, Y=Y, Cb = Cb, Cr = Cr,
                          pos=pos, entropy=entropy)
         
@@ -152,6 +152,28 @@ def create_graph(fvector):
                 imgraph.add_edge(i, j, weight=weight)
     return imgraph
 
+def process_graph(imgraph, partition):
+    """
+    This routine will process the graph and attempt to divide it into
+    communities.
+    """
+
+    # The values of the partition will represent the community to which they
+    # belong. The keys are the node numbers.
+    
+    n_communities = max(partition.values()) + 1
+    n_nodes = len(partition)
+    communities = range(n_communities)
+
+    # The next one is a sad hack. Need to find an elegant way.
+    for i in range(n_communities):
+        communities[i] = []
+        
+    for i in range(n_nodes):
+        communities[partition[i]].append(i)
+        
+    return communities
+
 def save_partition_snapshot(imgraph, partition):
     """
     Save the partition shapshot. This is just for reference.
@@ -174,4 +196,25 @@ im_processed = process_image(im)
 fvector = create_feature_vector(im_processed)
 imgraph = create_graph(fvector)
 partition = community.best_partition(imgraph)
-save_partition_snapshot(imgraph, partition)
+comm = process_graph(imgraph, partition)
+
+positions = []
+for group in comm:
+    pos = []
+    for index in group:
+        x, y = imgraph.node[index]['pos']
+        pos.append([x, y])
+    positions.append(pos)
+
+for t in positions:
+    t = array(t)
+    x1 = min(t[:,0])
+    x2 = max(t[:,0])
+    y1 = min(t[:,1])
+    y2 = max(t[:,1])
+    
+    im[x1:x2, y1] = 0
+    im[x1:x2, y2] = 0
+    im[x1, y1:y2] = 0
+    im[x2, y1:y2] = 0
+Image.fromarray(im).show()
