@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 import sys
@@ -207,4 +206,3 @@ def create_graph(pil_image, pixel_group_size=8):
     
     return graph
 
-create_graph(Image.open('template.jpg'))
