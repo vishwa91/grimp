@@ -40,8 +40,10 @@ class correlate_graph:
         '''
 
         fvector = []
-        for i in range(self.xdim):
-            for j in range(self.ydim):
+        iterx = self.xdim // self.patch_size
+        itery = self.ydim // self.patch_size
+        for i in range(iterx):
+            for j in range(itery):
                 x1 = i * self.patch_size
                 x2 = x1 + self.patch_size
                 y1 = j * self.patch_size
@@ -64,26 +66,29 @@ class correlate_graph:
         # Create edges now. The weight will be proportional to the correlation
         # of the 3 channels
         for i in range(n_nodes):
-            for j in range(i, n_nodes):
+            for j in range(i+1, n_nodes):
                 imR1 = fvector[i][0]
                 imR2 = fvector[j][0]
-                corR = corrcoef(imR1, imR2)
-                x = where(isnan(corR))
-                corR[x] = 1.
+                #corR = corrcoef(imR1, imR2)
+                #x = where(isnan(corR))
+                #corR[x] = 1.
 
                 imG1 = fvector[i][1]
                 imG2 = fvector[j][1]
-                corG = corrcoef(imG1, imG2)
-                x = where(isnan(corG))
-                corG[x] = 1.
+                #corG = corrcoef(imG1, imG2)
+                #x = where(isnan(corG))
+                #corG[x] = 1.
 
                 imB1 = fvector[i][2]
                 imB2 = fvector[j][2]
-                corB = corrcoef(imB1, imB2)
-                x = where(isnan(corB))
-                corB[x] = 1.
-
-                weight = corR.prod() * corG.prod() * corB.prod()
+                #corB = corrcoef(imB1, imB2)
+                #x = where(isnan(corB))
+                #corB[x] = 1.
+                cor_coef = corrcoef((imR1+imG1+imB1)/3, (imR2+imG2+imB2)/3)
+                x = where(isnan(cor_coef))
+                cor_coef[x] = 1.
+                weight = cor_coef.prod()
+                #weight = corR.prod() * corG.prod() * corB.prod()
                 G.add_edge(i, j, weight=weight)
         return G
         
@@ -265,11 +270,13 @@ def save_partition_snapshot(imgraph, partition):
     nx.draw_networkx_edges(imgraph,pos, alpha=0.5)
     plt.savefig('images/partition_snapshot.png')
     
-im = imread('flower.jpg')
+im = imread('random.jpg')
 '''
 im_processed = process_image(im)
 fvector = create_feature_vector(im_processed)
-imgraph = create_graph(fvector)
+'''
+#imgraph = create_graph(fvector)
+imgraph = correlate_graph(im, 12).graph
 partition = community.best_partition(imgraph)
 comm = process_graph(imgraph, partition)
 
@@ -289,12 +296,10 @@ for t in positions:
     y1 = min(t[:,1])
     y2 = max(t[:,1])
     im1 = copy(im)
-    im[x1:x2, y1] = 0
-    im[x1:x2, y2] = 0
-    im[x1, y1:y2] = 0
-    im[x2, y1:y2] = 0
+    im1[x1:x2, y1] = 0
+    im1[x1:x2, y2] = 0
+    im1[x1, y1:y2] = 0
+    im1[x2, y1:y2] = 0
     Image.fromarray(im1).convert('RGB').save('images/im'+str(count)+'.jpg')
     count += 1
 Image.fromarray(im).show()
-'''
-graph = correlate_graph(im)
