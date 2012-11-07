@@ -27,33 +27,29 @@ def corr2d(mat1, mat2):
     corr_coef = sum(product)/(1.0*x*y)
     return corr_coef
 
-class correlate_graph:
-    """
-    Create instances of this class to implement object detection using cross
-    correlation of image patches.
-    """
+class object_detect:
+    '''
+        This class will implement splitting images using community partition.
+        Here, we will try to implement features using correlation of a high
+        frequency component and low frequency of image patch.
+    '''
+
     def __init__(self, im, patch_size = 8):
-        
-        self.imR = im[:,:,0]
-        self.imG = im[:,:,1]
-        self.imB = im[:,:,2]
+
+        self.im = (im[:,:,0] + im[:,:,1] + im[:,:,2])/3
         self.patch_size = patch_size
 
-        x, y = self.imR.shape
+        x, y = self.im.shape
         resid_x = x % self.patch_size
         resid_y = y % self.patch_size
 
         self.xdim = x - resid_x
         self.ydim = y - resid_y
+
         self.fvector = self.create_features()
         self.graph = self.create_graph(self.fvector)
-        
-    def create_features(self):
-        '''
-            Not much to do here but to return the patches and position of the
-            pacth
-        '''
 
+    def create_features(self):
         fvector = []
         iterx = self.xdim // self.patch_size
         itery = self.ydim // self.patch_size
@@ -63,53 +59,65 @@ class correlate_graph:
                 x2 = x1 + self.patch_size
                 y1 = j * self.patch_size
                 y2 = y1 + self.patch_size
-                
-                imchunkR = self.imR[x1:x2, y1:y2]
-                imchunkG = self.imG[x1:x2, y1:y2]
-                imchunkB = self.imB[x1:x2, y1:y2]
+                lpf_kernel = array([[0,1,0],
+                                    [1,1,1],
+                                    [0,1,0]])
+                hpf_kernel = array([[0,1,0],
+                                    [1,-4,1],
+                                    [0,1,0]])
+                imchunk = self.im[x1:x2, y1:y2]
+                # Create Low frequency and high frequency images.
+                im_lf = conv(lpf_kernel, imchunk)[1:-1,1:-1]
+                im_hf = conv(hpf_kernel, imchunk)[1:-1,1:-1]
                 pos = [(x2+x1)/2, (y2+y1)/2]
-                fvector.append([imchunkR, imchunkG, imchunkB, pos])
+                fvector.append([imchunk, im_lf, im_hf, pos])
+                
         return fvector
 
     def create_graph(self, fvector):
         n_nodes = len(fvector)
         # Create nodes first
         G = nx.Graph()
+
         for i in range(n_nodes):
             G.add_node(i, pos=fvector[i][3])
 
-        # Create edges now. The weight will be proportional to the correlation
-        # of the 3 channels
+        # Create edges now. The weight is multiplication of the correlation
+        # coefficients for im, low frequency and high frequency images
+        # and a linear function of distance between chunks
+
         for i in range(n_nodes):
             for j in range(i+1, n_nodes):
-                imR1 = fvector[i][0]
-                imR2 = fvector[j][0]
-                #corR = corrcoef(imR1, imR2)
-                #x = where(isnan(corR))
-                #corR[x] = 1.
+                im1 = fvector[i][0]
+                iml1 = fvector[i][1]
+                imh1 = fvector[i][2]
 
-                imG1 = fvector[i][1]
-                imG2 = fvector[j][1]
-                #corG = corrcoef(imG1, imG2)
-                #x = where(isnan(corG))
-                #corG[x] = 1.
+                im2 = fvector[j][0]
+                iml2 = fvector[j][1]
+                imh2 = fvector[j][2]
 
-                imB1 = fvector[i][2]
-                imB2 = fvector[j][2]
-                #corB = corrcoef(imB1, imB2)
-                #x = where(isnan(corB))
-                #corB[x] = 1.
-                cor_coef = corr2d((imR1+imG1+imB1)/3, (imR2+imG2+imB2)/3)
+                # Find the cross correlation of image patches first
+                cor_im = corr2d(im1, im2)
+
+                # Correlate low frequency image now.
+                cor_l = corr2d(iml1, iml2)
+
+                # High frequency finally
+                cor_h = corr2d(imh1, imh2)
+
+                Rmax = hypot(self.xdim, self.ydim)
+
+                # Our weight is product of all these correlation coefficients
+                # and inverse ratio of distance and max. distance
                 x1, y1 = fvector[i][3]
                 x2, y2 = fvector[j][3]
                 dist = hypot(x2-x1, y2-y1)
-                weight = cor_coef.prod() / (2 + dist)
-                #print weight
-                #weight = corR.prod() * corG.prod() * corB.prod()
-                if (weight > 10e-80):
+                weight = cor_im.prod()*cor_l.prod()*cor_h.prod()*(Rmax/dist)
+
+                if (weight > 10e-30):
                     G.add_edge(i, j, weight=weight)
         return G
-
+    
 def process_graph(imgraph, partition):
     """
     This routine will process the graph and attempt to divide it into
@@ -132,25 +140,8 @@ def process_graph(imgraph, partition):
         
     return communities
 
-def save_partition_snapshot(imgraph, partition):
-    """
-    Save the partition shapshot. This is just for reference.
-    """
-    size = float(len(set(partition.values())))
-    pos = nx.spring_layout(imgraph)
-    count = 0.
-    for com in set(partition.values()) :
-        count = count + 1.
-        list_nodes = [nodes for nodes in partition.keys()
-                                    if partition[nodes] == com]
-        nx.draw_networkx_nodes(imgraph, pos, list_nodes, node_size = 20,
-                                    node_color = str(count / size))
-
-    nx.draw_networkx_edges(imgraph,pos, alpha=0.5)
-    plt.savefig('images/__partition_snapshot.png')
-
 im = imread('mlogo.jpg')
-imgraph = correlate_graph(im, 8).graph
+imgraph = object_detect(im, 12).graph
 partition = community.best_partition(imgraph)
 comm = process_graph(imgraph, partition)
 
@@ -170,11 +161,10 @@ for t in positions:
     y1 = min(t[:,1])
     y2 = max(t[:,1])
     im1 = copy(im)
-    im[x1:x2, y1] = 0
-    im[x1:x2, y2] = 0
-    im[x1, y1:y2] = 0
-    im[x2, y1:y2] = 0
+    im1[x1:x2, y1] = 0
+    im1[x1:x2, y2] = 0
+    im1[x1, y1:y2] = 0
+    im1[x2, y1:y2] = 0
     Image.fromarray(im1).convert('RGB').save('images/im'+str(count)+'.jpg')
     count += 1
 Image.fromarray(im).show()
-save_partition_snapshot(imgraph, partition)

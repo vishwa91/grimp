@@ -190,7 +190,7 @@ def save_partition_snapshot(imgraph, partition):
     nx.draw_networkx_edges(imgraph,pos, alpha=0.5)
     plt.savefig('images/__partition_snapshot.png')
 
-im = imread('mlogo.jpg')
+im = imread('random.jpg')
 im_processed = process_image(im)
 fvector = create_feature_vector(im_processed)
 imgraph = create_graph(fvector)
@@ -214,11 +214,11 @@ for t in positions:
     y1 = min(t[:,1])
     y2 = max(t[:,1])
     im1 = copy(im)
-    im[x1:x2, y1] = 0
-    im[x1:x2, y2] = 0
-    im[x1, y1:y2] = 0
-    im[x2, y1:y2] = 0
+    im1[x1:x2, y1] = 0
+    im1[x1:x2, y2] = 0
+    im1[x1, y1:y2] = 0
+    im1[x2, y1:y2] = 0
     Image.fromarray(im1).convert('RGB').save('images/im'+str(count)+'.jpg')
     count += 1
 Image.fromarray(im).show()
-save_partition_snapshot(imgraph, partition)
+#save_partition_snapshot(imgraph, partition)
