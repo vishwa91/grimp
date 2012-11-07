@@ -134,16 +134,22 @@ def create_graph(fvector, xdim, ydim):
             
             Y1 = imgraph.node[i]['Y']
             Y2 = imgraph.node[j]['Y']
+            Y1 = 0
+            Y2 = 0
             Cb1 = imgraph.node[i]['Cb']
             Cb2 = imgraph.node[j]['Cb']
             Cr1 = imgraph.node[i]['Cr']
             Cr2 = imgraph.node[j]['Cr']
+            Cb1 = 0
+            Cb2 = 0
+            Cr1 = 0
+            Cr2 = 0
             x1,y1 = imgraph.node[i]['pos']
             x2,y2 = imgraph.node[j]['pos']
             E1 = imgraph.node[i]['entropy']
             E2 = imgraph.node[j]['entropy']
 
-            v1 = array([Y2-Y1, Cb2-Cb1, Cr2-Cr1, E2-E1])
+            v1 = array([Y2-Y1, Cb2-Cb1, Cr2-Cr1, (E2-E1)])
             dist_max = hypot(xdim, ydim)
             dist = hypot(x2-x2, y2-y1)
             weight = exp(-1 * dot(v1, v1.T))*log(dist_max / (1 + dist))
