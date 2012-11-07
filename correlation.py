@@ -149,17 +149,56 @@ def save_partition_snapshot(imgraph, partition):
     nx.draw_networkx_edges(imgraph,pos, alpha=0.5)
     plt.savefig('images/__partition_snapshot.png')
 
+def draw_line(im, point1, point2):
+    """
+        Routine to draw a line between two images in a ndimage array.
+        This can also be done in PIL image, but it may take time to convert
+        from ndarray to PIL and back again
+    """
+    x1, y1 = point1
+    x2, y2 = point2
+
+    dist = hypot(x2-x1, y2-y1)
+    theta = arctan2(y2-y1, x2-x1)
+
+    r = array(range(int(dist +1)))
+    x = x1 + r * cos(theta)
+    y = y1 + r * sin(theta)
+    x = x.astype(int)
+    y = y.astype(int)
+    im[x, y] = 0
+    im[x1-1:x1+1, y1-1:y1+1] = [255,0,0]
+    im[x2-1:x2+1, y2-1:y2+1] = [255,0,0]
+
+    return im
+
 im = imread('mlogo.jpg')
 imgraph = correlate_graph(im, 8).graph
 partition = community.best_partition(imgraph)
 comm = process_graph(imgraph, partition)
 
 positions = []
+im_temp = im.copy()
+count = 0
 for group in comm:
     pos = []
+    old_pos = None
+    im1 = im_temp.copy()
     for index in group:
         x, y = imgraph.node[index]['pos']
         pos.append([x, y])
+        if old_pos == None:
+            old_pos = [x, y]
+            im[x-2:x+2, y-2:y+2] = [0,0,255]
+        else:
+            im = draw_line(im, old_pos, [x, y])
+            old_pos = [x, y]
+        X = 4
+        im1[x-X:x+X, y-X:y+X] += 50
+    im[x-2:x+2, y-2:y+2] = [255,255,0]    
+    
+    Image.fromarray(im1).convert('RGB').save('images/im'+str(count)+'.jpg')
+    count += 1
     positions.append(pos)
 
 count = 0
@@ -174,7 +213,7 @@ for t in positions:
     im[x1:x2, y2] = 0
     im[x1, y1:y2] = 0
     im[x2, y1:y2] = 0
-    Image.fromarray(im1).convert('RGB').save('images/im'+str(count)+'.jpg')
+    #Image.fromarray(im1).convert('RGB').save('images/im'+str(count)+'.jpg')
     count += 1
 Image.fromarray(im).show()
 save_partition_snapshot(imgraph, partition)

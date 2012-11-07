@@ -146,8 +146,8 @@ def create_graph(fvector, xdim, ydim):
             v1 = array([Y2-Y1, Cb2-Cb1, Cr2-Cr1, E2-E1])
             dist_max = hypot(xdim, ydim)
             dist = hypot(x2-x2, y2-y1)
-            #weight = exp(-1 * dot(v1, v1.T))*(dist_max / (1 + dist))
-            weight = exp(-1 * dot(v1, v1.T))
+            weight = exp(-1 * dot(v1, v1.T))*log(dist_max / (1 + dist))
+            #weight = exp(-1 * dot(v1, v1.T))
             if weight > 10e-10:
                 #print weight
                 imgraph.add_edge(i, j, weight=weight)
@@ -215,7 +215,7 @@ def draw_line(im, point1, point2):
 
     return im
 
-im = imread('random.jpg')
+im = imread('mlogo.jpg')
 im_processed = process_image(im)
 fvector = create_feature_vector(im_processed)
 imgraph = create_graph(fvector, im.shape[1], im.shape[2])
@@ -224,9 +224,12 @@ partition = community.best_partition(imgraph)
 comm = process_graph(imgraph, partition)
 
 positions = []
+im_temp = im.copy()
+count = 0
 for group in comm:
     pos = []
     old_pos = None
+    im1 = im_temp.copy()
     for index in group:
         x, y = imgraph.node[index]['pos']
         pos.append([x, y])
@@ -236,7 +239,12 @@ for group in comm:
         else:
             im = draw_line(im, old_pos, [x, y])
             old_pos = [x, y]
-    im[x-2:x+2, y-2:y+2] = [255,255,0]
+        X = 4
+        im1[x-X:x+X, y-X:y+X] += 50
+    im[x-2:x+2, y-2:y+2] = [255,255,0]    
+    
+    Image.fromarray(im1).convert('RGB').save('images/im'+str(count)+'.jpg')
+    count += 1
     positions.append(pos)
 
 count = 0
@@ -251,7 +259,7 @@ for t in positions:
     im1[x1:x2, y2] = 0
     im1[x1, y1:y2] = 0
     im1[x2, y1:y2] = 0
-    Image.fromarray(im1).convert('RGB').save('images/im'+str(count)+'.jpg')
+    #Image.fromarray(im1).convert('RGB').save('images/im'+str(count)+'.jpg')
     count += 1
 Image.fromarray(im).show()
 #save_partition_snapshot(imgraph, partition)
