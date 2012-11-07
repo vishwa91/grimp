@@ -114,7 +114,7 @@ def create_feature_vector(im, patch_size=8):
             fvector.append([Y, Cb, Cr, pos, entropy])
     return fvector
 
-def create_graph(fvector):
+def create_graph(fvector, xdim, ydim):
     """
         Create the image graph from the feature vectors.
     """
@@ -130,7 +130,7 @@ def create_graph(fvector):
     # vertices featrues except distance between them.
     
     for i in range(node_count):
-        for j in range(i, node_count):
+        for j in range(i+1, node_count):
             
             Y1 = imgraph.node[i]['Y']
             Y2 = imgraph.node[j]['Y']
@@ -144,9 +144,11 @@ def create_graph(fvector):
             E2 = imgraph.node[j]['entropy']
 
             v1 = array([Y2-Y1, Cb2-Cb1, Cr2-Cr1, E2-E1])
-            #weight = exp(-1 * dot(v1, v1.T)) * 100 / (1+hypot(x2-x1, y2-y1))
+            dist_max = hypot(xdim, ydim)
+            dist = hypot(x2-x2, y2-y1)
+            #weight = exp(-1 * dot(v1, v1.T))*(dist_max / (1 + dist))
             weight = exp(-1 * dot(v1, v1.T))
-            if weight > 10e-80:
+            if weight > 10e-10:
                 #print weight
                 imgraph.add_edge(i, j, weight=weight)
     return imgraph
@@ -190,10 +192,33 @@ def save_partition_snapshot(imgraph, partition):
     nx.draw_networkx_edges(imgraph,pos, alpha=0.5)
     plt.savefig('images/__partition_snapshot.png')
 
+def draw_line(im, point1, point2):
+    """
+        Routine to draw a line between two images in a ndimage array.
+        This can also be done in PIL image, but it may take time to convert
+        from ndarray to PIL and back again
+    """
+    x1, y1 = point1
+    x2, y2 = point2
+
+    dist = hypot(x2-x1, y2-y1)
+    theta = arctan2(y2-y1, x2-x1)
+
+    r = array(range(int(dist +1)))
+    x = x1 + r * cos(theta)
+    y = y1 + r * sin(theta)
+    x = x.astype(int)
+    y = y.astype(int)
+    im[x, y] = 0
+    im[x1-1:x1+1, y1-1:y1+1] = [255,0,0]
+    im[x2-1:x2+1, y2-1:y2+1] = [255,0,0]
+
+    return im
+
 im = imread('random.jpg')
 im_processed = process_image(im)
 fvector = create_feature_vector(im_processed)
-imgraph = create_graph(fvector)
+imgraph = create_graph(fvector, im.shape[1], im.shape[2])
 
 partition = community.best_partition(imgraph)
 comm = process_graph(imgraph, partition)
@@ -201,9 +226,17 @@ comm = process_graph(imgraph, partition)
 positions = []
 for group in comm:
     pos = []
+    old_pos = None
     for index in group:
         x, y = imgraph.node[index]['pos']
         pos.append([x, y])
+        if old_pos == None:
+            old_pos = [x, y]
+            im[x-2:x+2, y-2:y+2] = [0,0,255]
+        else:
+            im = draw_line(im, old_pos, [x, y])
+            old_pos = [x, y]
+    im[x-2:x+2, y-2:y+2] = [255,255,0]
     positions.append(pos)
 
 count = 0
