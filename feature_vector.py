@@ -221,11 +221,12 @@ def draw_line(im, point1, point2):
 
     return im
 
-im = imread('mlogo.jpg')
+im = imread('ball.jpg')
+print clock()
 im_processed = process_image(im)
 fvector = create_feature_vector(im_processed)
 imgraph = create_graph(fvector, im.shape[1], im.shape[2])
-
+print clock()
 partition = community.best_partition(imgraph)
 comm = process_graph(imgraph, partition)
 
