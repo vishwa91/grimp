@@ -10,8 +10,8 @@ Fundamentals of its functioning
 
 Most of what is done here is amply described in a bunch of papers:
 1. http://www3.ntu.edu.sg/home/ASDRajan/cvpr09.pdf
-2. http://ieeexplore.ieee.org/xpls/abs\_all.jsp?arnumber=5497152
-3. http://ieeexplore.ieee.org/xpls/abs\_all.jsp?arnumber=4907085
+2. http://ieeexplore.ieee.org/xpls/abs_all.jsp?arnumber=5497152
+3. http://ieeexplore.ieee.org/xpls/abs_all.jsp?arnumber=4907085
  
 For the most part, we are trying to reproduce their results, but we won't hesitate to try out a few experiments of our own, here and there.
 
@@ -33,7 +33,7 @@ Each node has a feature vector comprising of the elements:
 - The orientation entropy E<sub>ρ4</sub> at a scaling of 2
 - The orientation entropy E<sub>ρ5</sub> at a scaling of 2.5
 
-The orientation entropy itself is defined in terms of the orientation histogram and the scalings refer to the variances of the gaussian kernels convoluted with the image in order to capture the image complexity at different scales and reduce the dependency of the feature vector on the size of the pixel group. Refer to the aforementioned papers, and to http://en.wikipedia.org/wiki/Scale\_space for more information.
+The orientation entropy itself is defined in terms of the orientation histogram and the scalings refer to the variances of the gaussian kernels convoluted with the image in order to capture the image complexity at different scales and reduce the dependency of the feature vector on the size of the pixel group. Refer to the aforementioned papers, and to http://en.wikipedia.org/wiki/Scale_space for more information.
 
 ### Create the edges of the graph by defining a weight measure
 
