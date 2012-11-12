@@ -37,7 +37,7 @@ def _preprocess_image(im, patch_size=8):
 def _create_feature_vector(im, patch_size = 8):
     '''
         Creates the feature vector for the images, which will be passed
-        to the create_graph function.
+        to the _create_graph function.
         The features are:
         1. Cb of the patch
         2. Cr of the patch
@@ -49,7 +49,7 @@ def _create_feature_vector(im, patch_size = 8):
         8. Distance between patch centers.
 
         The first 7 features have exponential weightage but distance is
-        logarithimic.
+        linear.
     '''
     imY, imCb, imCr = im
     xdim, ydim = imY.shape
@@ -95,7 +95,7 @@ def _create_feature_vector(im, patch_size = 8):
                 imchunk = gaussian_filter(imchunkY, sqrt(var))
                 imx = conv(imchunk, kernx)
                 imy = conv(imchunk, kerny)
-                grad = 180 + 180*arctan2(imy, imx)/pi
+                grad = 180 + 180*arctan2(imx, imy)/pi
 
                 # Segregate the orientations into bins
                 bin_len_l = 0
@@ -115,7 +115,7 @@ def _create_feature_vector(im, patch_size = 8):
                 fvector[-1].append(E)
     return fvector
 
-def _create_graph(fvector, xdim, ydim):
+def _create_graph(fvector, xdim, ydim, patch_size):
     '''
         Create a graph for the given feature vector.
     '''
@@ -149,8 +149,10 @@ def _create_graph(fvector, xdim, ydim):
                 dist = hypot(pos[0]-pos0[0], pos[1]-pos0[1])
 
                 #weight = exp(-dot(V, V.T)) * log(dist_max/(1+dist))
-                weight = exp(-dot(V, V.T)) * (1 - (dist/dist_max))
-                if weight > 10e-10:
+                #weight = exp(-dot(V, V.T)) * (1 - (dist/dist_max))
+                weight = exp(-dot(V, V.T))
+                #if weight > 10e-30:
+                if dist < patch_size * sqrt(2.1):
                     G.add_edge(i, count, weight=weight)
                 count += 1
     return G
@@ -163,6 +165,6 @@ def create_graph(im, patch_size=8):
     fvector = _create_feature_vector(im, patch_size)
     x, y, z = im.shape
 
-    return _create_graph(fvector, x, y)
+    return _create_graph(fvector, x, y, patch_size)
 if __name__ == '__main__':
     im = imread('src/ball1.jpg')

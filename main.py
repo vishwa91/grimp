@@ -4,7 +4,7 @@ from generator import *
 from processor import *
 import metis
 
-patch_size = 8
+patch_size = 6
 imname = 'src/new_image.jpg'
 im = imread(imname)
 imtemp = im.copy()
@@ -14,7 +14,7 @@ comm, partition = process_graph(G)
 save_community_snapshot(im, G, comm, patch_size)
 node_list = [d for n,d in G.nodes_iter(data=True)]
 print 'Level Zero done.'
-(edgecuts, parts) = metis.part_graph(G, 2, recursive = True)
+(edgecuts, parts) = metis.part_graph(G, nparts=3)
 
 for i in range(len(parts)):
     if parts[i]==1:

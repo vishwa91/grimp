@@ -1,3 +1,8 @@
 1. The bounding box is a horrible misnomer
 2. Distance penality should be considered. Need to choose linear or exponential
 3. Trying METIS for graph partitioning
+
+Computer:
+10.21.3.172
+name: vivekkumar
+password: ee10b047
