@@ -91,11 +91,11 @@ def _create_feature_vector(im, patch_size = 8):
             for var in scale_vector:                
                 # Calculate the orientation histogram
                 
-                nbins = 18
+                nbins = 9
                 imchunk = gaussian_filter(imchunkY, sqrt(var))
                 imx = conv(imchunk, kernx)
                 imy = conv(imchunk, kerny)
-                grad = 180 + 180*arctan2(imx, imy)/pi
+                grad = 180 + 180*arctan2(imy, imx)/pi
 
                 # Segregate the orientations into bins
                 bin_len_l = 0
