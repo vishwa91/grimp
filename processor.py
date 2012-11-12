@@ -30,7 +30,7 @@ def process_graph(imgraph):
     for i in range(n_nodes):
         communities[partition[i]].append(i)
         
-    return communities
+    return communities, partition
 
 def _draw_line(im, point1, point2):
     """

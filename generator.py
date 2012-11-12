@@ -148,7 +148,8 @@ def _create_graph(fvector, xdim, ydim):
                 dist_max = hypot(xdim, ydim) * 1.0
                 dist = hypot(pos[0]-pos0[0], pos[1]-pos0[1])
 
-                weight = exp(-dot(V, V.T)) * log(dist_max/(1+dist))
+                #weight = exp(-dot(V, V.T)) * log(dist_max/(1+dist))
+                weight = exp(-dot(V, V.T)) * (1 - (dist/dist_max))
                 if weight > 10e-10:
                     G.add_edge(i, count, weight=weight)
                 count += 1
@@ -164,11 +165,4 @@ def create_graph(im, patch_size=8):
 
     return _create_graph(fvector, x, y)
 if __name__ == '__main__':
-    import time
-    im = imread('ball1.jpg')
-    print time.clock()
-    im = _preprocess_image(im)
-    fvector = _create_feature_vector(im)
-    x, y, z = im.shape
-    G = _create_graph(fvector, x, y)
-    print time.clock()
+    im = imread('src/ball1.jpg')

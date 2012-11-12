@@ -2,15 +2,23 @@
 
 from generator import *
 from processor import *
-from canny import Canny
+import metis
+
 patch_size = 8
-imname = 'flower.jpg'
+imname = 'src/new_image.jpg'
 im = imread(imname)
-im_edge = Canny(imname, 1).grad[1:-1, 1:-1]
-im_high = empty_like(im)
-im_high[:,:,0] = im_edge[:,:]
-im_high[:,:,1] = im_edge[:,:]
-im_high[:,:,2] = im_edge[:,:]
-G = create_graph(gaussian_filter(im, 2)+im_high,patch_size)
-community = process_graph(G)
-save_community_snapshot(im, G, community, patch_size)
+imtemp = im.copy()
+print 'Starting graph processing'
+G = create_graph(im,patch_size)
+comm, partition = process_graph(G)
+save_community_snapshot(im, G, comm, patch_size)
+node_list = [d for n,d in G.nodes_iter(data=True)]
+print 'Level Zero done.'
+(edgecuts, parts) = metis.part_graph(G, 2, recursive = True)
+
+for i in range(len(parts)):
+    if parts[i]==1:
+        x, y = G.node[i]['pos']
+        t = patch_size // 2
+        imtemp[x-t:x+t, y-t:y+t] += 50
+Image.fromarray(imtemp).convert('RGB').save('partition_check.jpg')
