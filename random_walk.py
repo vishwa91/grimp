@@ -77,7 +77,7 @@ def equilibrium_distribution(P):
     # I was not able to invert (I-P+W) to get the fundamental matrix because
     # this matrix was singular for some reason. However, 303 appeared to work.
     
-    index = sp.where(w == 1)[0][1]
+    index = sp.where(w == 1)[0]
     return vr[:, index]
 
 def equilibrium_transition_matrix(eq_pi, n=None):
@@ -148,7 +148,7 @@ def hitting_times(eq_pi, Z, n=None):
     Ei_Tj_test = sp.empty((n, n))
     for i in range(n):
         for j in range(n):
-            Ei_Tj_test[i][j] = Ei_Ti[j] * (Z[j][j] - Z[i][j])
+            Ei_Tj_test[i][j] = Ei_Ti[j, 0] * (Z[j][j] - Z[i][j])
     
     # FIXME
     if (Ei_Tj == Ei_Tj_test).all():
@@ -160,3 +160,4 @@ def hitting_times(eq_pi, Z, n=None):
     Epi_Ti = sp.multiply(Ei_Ti.reshape((1, n)), Z.diagonal().reshape((1, n)))
     
     return Ei_Ti, Ei_Tj, Epi_Ti
+

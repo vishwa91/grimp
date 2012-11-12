@@ -7,6 +7,7 @@ import scipy as sp
 import numpy as np
 import scipy.ndimage as ni
 import networkx as nx
+import itertools as it
 
 FEATURE_VECTOR_SIZE = 7
 NUM_HISTOGRAM_BUCKETS = 18 # This value actually has to be chosen carefully.
@@ -97,10 +98,11 @@ def _create_nodes(source, graph, patches):
     """
     
     # Iterate over the patches and apply them to the source vector
-    i = 0
     for patch in patches:
-        graph.add_node(i, feature_vector=_create_feature_vector(source[patch]))
-        i += 1
+        graph.add_node(
+            (patch.x, patch.y),
+            feature_vector=_create_feature_vector(source[patch.slice])
+        )
 
 def _create_edges(graph):
     """
@@ -108,12 +110,12 @@ def _create_edges(graph):
     """
     n = graph.number_of_nodes()
     nodes = graph.nodes(data = True)
-    for i in range(n):
-        for j in range(i+1, n):
-            diff_vector = (  nodes[i][1]['feature_vector']
-                           - nodes[j][1]['feature_vector'] )
-            weight = sp.exp(-sp.dot(diff_vector, diff_vector))
-            graph.add_edge(i, j, weight=weight)
+
+    for (node1, node2) in it.combinations(nodes, 2):
+        diff_vector = (  node1[1]['feature_vector']
+                       - node2[1]['feature_vector'] )
+        weight = sp.exp(-sp.dot(diff_vector, diff_vector))
+        graph.add_edge(node1[0], node2[0], weight=weight)
 
 def _scale_image(image, scaling):
     """
@@ -183,16 +185,22 @@ def create_graph(pil_image, pixel_group_size=8):
     # We now need to split up the image into patches of size pixel_group_size
     # First, we create a list of patches. Each 'patch' in this list will be a 
     # tuple describing an array slice of the image that produces this patch.
+    class Patch(object):
+        pass
     patches = []
     i = pixel_group_size
     while(i < maxx):
         j = pixel_group_size
         while(j < maxy):
             # We want to extract source[:, x:x+delta_x, y:y+delta_y]
-            patches.append(( slice(0, FEATURE_VECTOR_SIZE + 1),
+            patch = Patch()
+            patch.slice = (  slice(0, FEATURE_VECTOR_SIZE + 1),
                              slice(i-pixel_group_size, i), 
                              slice(j-pixel_group_size, j),
-                          ))
+                          )
+            patch.x = i / pixel_group_size - 1
+            patch.y = j / pixel_group_size - 1
+            patches.append(patch)
             j += pixel_group_size
         i += pixel_group_size
     print 'Done making patches'
