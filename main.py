@@ -4,14 +4,12 @@
 import Image
 
 import scipy as sp
-from networkx import read_yaml, write_yaml
 
 from generate import create_graph, localize
 import random_walk as rw
 
 from saliency_framework import salient_node
 
-GRAPH_FILE_PATH = 'graph_of_template.yaml'
 IMAGE_PATH = '16x16.png'
 PIXEL_GROUP_SIZE = 4
 
