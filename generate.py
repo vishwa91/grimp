@@ -103,7 +103,7 @@ def _create_nodes(source, graph, patches):
             (patch.x, patch.y),
             feature_vector=_create_feature_vector(source[patch.slice])
         )
-        print 'Feature vector of node (',patch.x, patch.y,'):',np.around(graph.node[(patch.x, patch.y)]['feature_vector'])
+        #print 'Feature vector of node (',patch.x, patch.y,'):',np.around(graph.node[(patch.x, patch.y)]['feature_vector'])
 
 def _create_edges(graph):
     """
@@ -187,7 +187,7 @@ def create_graph(pil_image, pixel_group_size=8):
     print 'maxy:',maxy
     source = sp.array(source)
     
-    np.set_printoptions(threshold='nan', linewidth=130)
+    #np.set_printoptions(threshold='nan', linewidth=130)
     print np.around(source)
 
     # We now have a ``source`` vector which contains the basic elements from
@@ -225,7 +225,7 @@ def create_graph(pil_image, pixel_group_size=8):
     _create_edges(graph)
     print 'Done creating edges'
     
-    return graph
+    return graph, maxx, maxy
 
 def _distance(node1, node2):
     """
@@ -241,11 +241,19 @@ def localize(graph, size):
     Localizes an image's graph: that is, it removes edges that connect patches
     far apart from each other. The way the graph is constructed,
     """
-    local_graph = nx.Graph()
+    local_graph = graph.copy()
     # There has got to be a more efficient way of doing this...
+    print 'Localizing...'
     for (node, neighbours) in graph.adjacency_iter():
+        #print node
         for neighbour in neighbours:
-            if(_distance(node, neighbour) <= size):
-                local_graph.add_edge(node, neighbour, 
-                                     weight=neighbours[neighbour]['weight'])
+            if(_distance(node, neighbour) >= size):
+                #print '\t', neighbour, 'chucked'
+                try:
+                    local_graph.remove_edge(node, neighbour)
+                except nx.exception.NetworkXError:
+                    pass
+            else:
+                pass
+                #print '\t', neighbour
     return local_graph

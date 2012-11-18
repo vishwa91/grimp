@@ -13,9 +13,10 @@ from saliency_framework import salient_node
 
 GRAPH_FILE_PATH = 'graph_of_template.yaml'
 IMAGE_PATH = '16x16.png'
+PIXEL_GROUP_SIZE = 4
 
 image = Image.open(IMAGE_PATH)
-graph = create_graph(image, 4)
+graph, maxx, maxy = create_graph(image, PIXEL_GROUP_SIZE)
 
 n = graph.number_of_nodes()
 
@@ -51,7 +52,7 @@ local_P = rw.generate_transition_matrix(local_graph, local_n)
 print 'Done getting local P'
 
 print
-print local_P
+print sp.around(local_P, 3)
 print
 
 local_eq_pi = rw.equilibrium_distribution(local_P)
@@ -70,5 +71,14 @@ print 'Done getting local Z'
 local_Ei_Ti, local_Ei_Tj, local_Epi_Ti = rw.hitting_times(local_eq_pi, local_Z,
                                                           local_n)
 print 'Done getting local hitting times'
+print 'Global Epi_Ti', Epi_Ti
+print 'Local Epi_Ti', local_Epi_Ti
 
-print salient_node(Ei_Ti, local_Ei_Ti)
+node_number = salient_node(Epi_Ti, local_Epi_Ti)
+print 'Salient node number:', node_number
+print 'Salient node coordinates: (', (node_number / (maxx/PIXEL_GROUP_SIZE) + 1), (node_number % (maxy/PIXEL_GROUP_SIZE) + 1), ')'
+#print multiple_nodes
+#print 'All most-salient-nodes:'
+#for node in multiple_nodes:
+#    print (node / (maxx/PIXEL_GROUP_SIZE) + 1), (node % (maxy/PIXEL_GROUP_SIZE) + 1)
+

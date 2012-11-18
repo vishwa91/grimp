@@ -60,7 +60,7 @@ def generate_transition_matrix(graph, n=None):
     
     return sp.asarray_chkfinite(P)
 
-def equilibrium_distribution(P):
+def equilibrium_distribution(P, roundoff=17):
     """
     Finds the equilibrium distribution of states for a given Markov probability
     transition matrix ``P``. It is assumed that a transition occurs from node j
@@ -76,15 +76,19 @@ def equilibrium_distribution(P):
     print list(sp.real(w))
     
     # Find the index of the eigenvalue 1
-    
-    # TODO: It's not very clear as to why I need to do the extra '[1]'. For the
-    # 'block.jpg' example, index contained two values - 63 and 303. On using 63
-    # I was not able to invert (I-P+W) to get the fundamental matrix because
-    # this matrix was singular for some reason. However, 303 appeared to work.
-    
-    index = sp.where(w == 1)[0]
+
+    index = sp.where((w > 0.999999999999999) * (w < 1.000000000000001))[0]
     print index
-    return vr[:, index]
+    #if index.size == 0:
+    #    if roundoff == 0:
+    #        raise ValueError
+    #    P = sp.around(P, roundoff-1)
+    #    return equilibrium_distribution(P, roundoff-1)
+    # For now, randomly just choose the first eigenvalue
+    if index.size > 1:
+        index = index[0]
+    eigenvector = vr[:, index]
+    return eigenvector
 
 def equilibrium_transition_matrix(eq_pi, n=None):
     """
