@@ -1,0 +1,19 @@
+1. No eigenvalues equal to one.
+    => Round off existing eigenvalues and check again.
+    => Rounding has to be arbit...
+
+2. More than one eigenvalue equal to one
+    => Components (assume that this is an if-and-only-if-condition)
+    => Graph is already separated
+    => Random walk won't work
+    => Present the results then and there
+
+3. One particular eigenvalue with very high multiplicity (not equal to one)
+    => This eigenvalue represents a flat background.
+    => Two nodes which are exactly identical will have the same weights to all other nodes, and weights of 1 to each other.
+    => Flat backgrounds can be directly detected in this way.
+
+4. On increasing the patch size, the entropy values explode and all weights go to zero.
+    => Scale entropy values depending upon the patch size.
+    => Find out the natural "scale" of the feature vector (given a patch size) and non-dimensionalize it
+
