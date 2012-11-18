@@ -225,6 +225,8 @@ def create_graph(pil_image, pixel_group_size=8):
     _create_edges(graph)
     print 'Done creating edges'
     
+    maxx -= (maxx % pixel_group_size)
+    maxy -= (maxy % pixel_group_size)
     return graph, maxx, maxy
 
 def _distance(node1, node2):

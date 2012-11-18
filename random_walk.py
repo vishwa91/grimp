@@ -60,7 +60,7 @@ def generate_transition_matrix(graph, n=None):
     
     return sp.asarray_chkfinite(P)
 
-def equilibrium_distribution(P, roundoff=17):
+def equilibrium_distribution(P):
     """
     Finds the equilibrium distribution of states for a given Markov probability
     transition matrix ``P``. It is assumed that a transition occurs from node j
@@ -75,20 +75,7 @@ def equilibrium_distribution(P, roundoff=17):
     print 'Eigenvalues:'
     print list(sp.real(w))
     
-    # Find the index of the eigenvalue 1
-
-    index = sp.where((w > 0.999999999999999) * (w < 1.000000000000001))[0]
-    print index
-    #if index.size == 0:
-    #    if roundoff == 0:
-    #        raise ValueError
-    #    P = sp.around(P, roundoff-1)
-    #    return equilibrium_distribution(P, roundoff-1)
-    # For now, randomly just choose the first eigenvalue
-    if index.size > 1:
-        index = index[0]
-    eigenvector = vr[:, index]
-    return eigenvector
+    return w, vr
 
 def equilibrium_transition_matrix(eq_pi, n=None):
     """
@@ -171,3 +158,117 @@ def hitting_times(eq_pi, Z, n=None):
     
     return Ei_Ti, Ei_Tj, Epi_Ti
 
+def do_global(graph):
+    n = graph.number_of_nodes()
+    print n
+
+    P = generate_transition_matrix(graph, n)
+    print 'Probability transition marix:'
+    print sp.where(P < 0.001, sp.zeros((n, n)), sp.around(P, 3))
+    print 'Done getting P'
+
+    w, vr = equilibrium_distribution(P)
+    # Find the index of the eigenvalue 1
+
+    index = sp.where((w > 0.999999999999999) * (w < 1.000000000000001))[0]
+    print index
+    #if index.size == 0:
+    #    if roundoff == 0:
+    #        raise ValueError
+    #    P = sp.around(P, roundoff-1)
+    #    return equilibrium_distribution(P, roundoff-1)
+
+    # Instead of randomly choosing the first eigenvalue, choose the first
+    # eigen value which yields a non-singular fundamental matrix
+    eigen_index = 0
+    while(1):
+        try:
+            chosen_index = index[eigen_index]
+            print 'Trying with index', chosen_index
+        except IndexError:
+            print 'No eigenvalue of 1 exists, or no eigenvector of 1 exists',
+            print 'which allows the fundamental matrix to be non-singular'
+            raise
+
+        eq_pi = vr[:, chosen_index]
+        print 'Eigenvector: '
+        print eq_pi
+        print 'Done getting pi'
+        print 'Finiteness check:',
+        try:
+            eq_pi = sp.asarray_chkfinite(eq_pi)
+            print 'OK'
+        except ValueError:
+            eigen_index += 1
+            continue
+
+        W = equilibrium_transition_matrix(eq_pi, n)
+        print 'Done getting W'
+
+        try:
+            Z = fundamental_matrix(P, W, n)
+            print 'Done getting Z'
+            break
+        except linalg.LinAlgError:
+            eigen_index += 1
+
+    Ei_Ti, Ei_Tj, Epi_Ti = hitting_times(eq_pi, Z, n)
+    print 'Done getting hitting times'
+
+    return Ei_Ti, Ei_Tj, Epi_Ti
+
+def do_local(local_graph):
+    local_n = local_graph.number_of_nodes()
+
+    local_P = generate_transition_matrix(local_graph, local_n)
+    print 'Local probability transition matrix:'
+    print sp.around(local_P, 3)
+    print 'Done getting local P'
+
+    w, vr = equilibrium_distribution(local_P)
+    # Find the index of the eigenvalue 1
+
+    index = sp.where((w > 0.999999999999999) * (w < 1.000000000000001))[0]
+    print index
+    #if index.size == 0:
+    #    if roundoff == 0:
+    #        raise ValueError
+    #    P = sp.around(P, roundoff-1)
+    #    return equilibrium_distribution(P, roundoff-1)
+
+    eigen_index = 0
+    while(1):
+        try:
+            chosen_index = index[eigen_index]
+        except IndexError:
+            print 'No eigenvalue of 1 exists, or no eigenvector of 1 exists'
+            print 'which allows the fundamental matrix to be non-singular'
+            raise
+
+        local_eq_pi = vr[:, chosen_index]
+        print 'Local eigenvector:'
+        print local_eq_pi
+        print 'Done getting local pi'
+        print 'Finiteness check:',
+        try:
+            local_eq_pi = sp.asarray_chkfinite(local_eq_pi)
+            print 'OK'
+        except ValueError:
+            eigen_index += 1
+            continue
+
+        local_W = equilibrium_transition_matrix(local_eq_pi, local_n)
+        print 'Done getting local W'
+
+        try:
+            local_Z = fundamental_matrix(local_P, local_W, local_n)
+            print 'Done getting local Z'
+            break
+        except linalg.LinAlgError:
+            eigen_index += 1
+
+    local_Ei_Ti, local_Ei_Tj, local_Epi_Ti = hitting_times(local_eq_pi, local_Z,
+                                                           local_n)
+    print 'Done getting local hitting times'
+
+    return local_Ei_Ti, local_Ei_Tj, local_Epi_Ti
