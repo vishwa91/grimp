@@ -35,7 +35,8 @@ def generate_transition_matrix(graph, n=None):
     
     # First, get the adjacency matrix of the graph
     P = sp.array(nx.adjacency_matrix(graph))
-    
+    print 'Adjacency matrix:'
+    print sp.around(P)
     # We'll also need the number of nodes
     if n is None:
         n = graph.number_of_nodes()
@@ -43,10 +44,12 @@ def generate_transition_matrix(graph, n=None):
     # The probability transition matrix is simply the adjacency matrix itself,
     # but with values along each column scaled so that every column sums up to
     # unity.
-    k = sp.array(graph.degree(weight='weight').values())    # Vector of degrees
+    k = sp.dot(sp.ones((1, n)), P)    # Vector of degrees
+    print 'Vector of degrees:', k
     # Stack degrees vertically:
-    K = sp.multiply(k.T, sp.ones(n).reshape((1, n)))
+    K = sp.multiply(sp.ones((n, 1)), k)
     P /= K
+    print 'Left stochastic check:', sp.dot(sp.ones((1, n)), P)
     
     # If any elements of K were zero, the corresponding elements of P would go
     # infinite. But logically, if the degree of a vertex is zero, then there is
@@ -69,6 +72,8 @@ def equilibrium_distribution(P):
     # have
     #                               P.π = π
     w, vr = linalg.eig(P)
+    print 'Eigenvalues:'
+    print list(sp.real(w))
     
     # Find the index of the eigenvalue 1
     
@@ -78,6 +83,7 @@ def equilibrium_distribution(P):
     # this matrix was singular for some reason. However, 303 appeared to work.
     
     index = sp.where(w == 1)[0]
+    print index
     return vr[:, index]
 
 def equilibrium_transition_matrix(eq_pi, n=None):
@@ -95,7 +101,7 @@ def equilibrium_transition_matrix(eq_pi, n=None):
     # The required matrix is simply the equilibrium distribution vector itself,
     # stacked horizontally to create a square matrix
     if n is None:
-        n = eq_pi.size()
+        n = eq_pi.size
     return sp.multiply(eq_pi.reshape((n, 1)), sp.ones((1, n)))
 
 def fundamental_matrix(P, W, n=None):
@@ -108,7 +114,7 @@ def fundamental_matrix(P, W, n=None):
     #                         Z = (I - P + W)^(-1)
     # where I is the identity matrix
     if n is None:
-        n = sp.sqrt(P.size())
+        n = sp.sqrt(P.size)
     return linalg.inv(sp.identity(n) - P + W)
 
 def hitting_times(eq_pi, Z, n=None):
@@ -132,7 +138,7 @@ def hitting_times(eq_pi, Z, n=None):
     """
 
     if n is None:
-        n = eq_pi.size()
+        n = eq_pi.size
     
     Ei_Ti = 1 / eq_pi
     
@@ -148,14 +154,14 @@ def hitting_times(eq_pi, Z, n=None):
     Ei_Tj_test = sp.empty((n, n))
     for i in range(n):
         for j in range(n):
-            Ei_Tj_test[i][j] = Ei_Ti[j, 0] * (Z[j][j] - Z[i][j])
+            Ei_Tj_test[i][j] = Ei_Ti[j] * (Z[j][j] - Z[i][j])
     
     # FIXME
     if (Ei_Tj == Ei_Tj_test).all():
         print 'It worked!'
     else:
         print 'It didn\'t work :-/'
-        print (Ei_Tj - Ei_Tj_test)
+        #print (Ei_Tj - Ei_Tj_test)
     
     Epi_Ti = sp.multiply(Ei_Ti.reshape((1, n)), Z.diagonal().reshape((1, n)))
     
