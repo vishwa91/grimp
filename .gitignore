@@ -1,2 +1,6 @@
 # Do not track pyc files
 *.pyc
+*.jpg
+*.bmp
+*~
+images/
