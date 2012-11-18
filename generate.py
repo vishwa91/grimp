@@ -15,6 +15,9 @@ NUM_HISTOGRAM_BUCKETS = 18 # This value actually has to be chosen carefully.
                            # pixel group size, then some buckets may end up
                            # having 0. Then, when we take log(histogram), that
                            # instance will go to negative infinity!
+BASE_PIXEL_GROUP_SIZE = 8.0 # 8 appears to be some magical number which makes
+                            # the entropy to be of the same order as the colour
+                            # values
 
 def _create_feature_vector(pixel_group):
     """
@@ -78,7 +81,10 @@ def _create_feature_vector(pixel_group):
             print histogram
             print fourier_spectrum
             sys.exit(1)
-        feature_vector[i] = entropy
+        # The scaling attempts to make the entropy value the same order as the
+        # Cb and Cr values. This does not guarantee a range of 0-255 however.
+        scaling = (BASE_PIXEL_GROUP_SIZE / num_pixels) ** 2
+        feature_vector[i] = entropy * scaling
     
     return feature_vector
 
