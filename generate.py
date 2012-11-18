@@ -103,18 +103,19 @@ def _create_nodes(source, graph, patches):
             (patch.x, patch.y),
             feature_vector=_create_feature_vector(source[patch.slice])
         )
+        print 'Feature vector of node (',patch.x, patch.y,'):',np.around(graph.node[(patch.x, patch.y)]['feature_vector'])
 
 def _create_edges(graph):
     """
     Creates the edges of the graph by setting the weights of connected nodes
     """
-    n = graph.number_of_nodes()
     nodes = graph.nodes(data = True)
-
+    
     for (node1, node2) in it.combinations(nodes, 2):
         diff_vector = (  node1[1]['feature_vector']
                        - node2[1]['feature_vector'] )
         weight = sp.exp(-sp.dot(diff_vector, diff_vector))
+        #print 'Nodes', node1[0], node2[0], ':', np.around(diff_vector), ',', weight
         graph.add_edge(node1[0], node2[0], weight=weight)
 
 def _scale_image(image, scaling):
@@ -163,6 +164,12 @@ def create_graph(pil_image, pixel_group_size=8):
                   sp.asarray(Cr),
                 ]
     source = [Cb, Cr]
+    print 'Y: '
+    print Y
+    print 'Cb: '
+    print Cb
+    print 'Cr: '
+    print Cr
     
     # For each of the orientation entropy values, we need to create a scaled
     # version of the image. For this, first convert the PIL image into a
@@ -176,8 +183,13 @@ def create_graph(pil_image, pixel_group_size=8):
                  ])
     maxx = image.shape[0]
     maxy = image.shape[1]
+    print 'maxx:',maxx
+    print 'maxy:',maxy
     source = sp.array(source)
     
+    np.set_printoptions(threshold='nan', linewidth=130)
+    print np.around(source)
+
     # We now have a ``source`` vector which contains the basic elements from
     # which the feature vector of each node will be generated
     print 'Done creating the source vector'
@@ -189,9 +201,9 @@ def create_graph(pil_image, pixel_group_size=8):
         pass
     patches = []
     i = pixel_group_size
-    while(i < maxx):
+    while(i <= maxx):
         j = pixel_group_size
-        while(j < maxy):
+        while(j <= maxy):
             # We want to extract source[:, x:x+delta_x, y:y+delta_y]
             patch = Patch()
             patch.slice = (  slice(0, FEATURE_VECTOR_SIZE + 1),
@@ -203,6 +215,7 @@ def create_graph(pil_image, pixel_group_size=8):
             patches.append(patch)
             j += pixel_group_size
         i += pixel_group_size
+    print 'Number of patches:', len(patches)
     print 'Done making patches'
     
     # Now we proceed to actually create the graph
@@ -214,3 +227,25 @@ def create_graph(pil_image, pixel_group_size=8):
     
     return graph
 
+def _distance(node1, node2):
+    """
+    Calculates the "distance" between two nodes.
+    ``node1`` and ``node2`` should be tuples with x and y coordinates.
+    """
+    delta_x = node1[0] - node2[0]
+    delta_y = node1[1] - node2[1]
+    return sp.sqrt(delta_x*delta_x + delta_y*delta_y)
+    
+def localize(graph, size):
+    """
+    Localizes an image's graph: that is, it removes edges that connect patches
+    far apart from each other. The way the graph is constructed,
+    """
+    local_graph = nx.Graph()
+    # There has got to be a more efficient way of doing this...
+    for (node, neighbours) in graph.adjacency_iter():
+        for neighbour in neighbours:
+            if(_distance(node, neighbour) <= size):
+                local_graph.add_edge(node, neighbour, 
+                                     weight=neighbours[neighbour]['weight'])
+    return local_graph
