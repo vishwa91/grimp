@@ -9,6 +9,11 @@ import networkx as nx
 import Image
 import community
 
+def community_detect(G):
+    '''
+        Try implementing community detection using our own algorithms.
+    '''
+    
 def process_graph(imgraph):
     """
     This routine will process the graph and attempt to divide it into
@@ -74,7 +79,9 @@ def save_community_snapshot(im, imgraph, community, patch_size=8):
         pos = []
         old_pos = None
         im1 = im_temp.copy()    # This image will be saved
-
+        if len(group) == 1:
+            print 'Seems like one of the high entropy regions. Will not be saved.'
+            continue
         for index in group:
             x, y = imgraph.node[index]['pos']
             pos.append([x, y])

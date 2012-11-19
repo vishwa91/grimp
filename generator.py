@@ -139,7 +139,7 @@ def _create_feature_vector(im, patch_size = 8):
     kerny = array([-1, -1, -1,
                     0,  0,  0,
                     1,  1,  1]).reshape(3,3)
-
+    
     for i in range(iterx):
         for j in range(itery):
             x1 = i * patch_size
@@ -162,7 +162,7 @@ def _create_feature_vector(im, patch_size = 8):
             fvector.append([Cb, Cr, pos])
             # We now need to find Entropy at 5 scales.
             scale_vector = [0.5, 1.0, 1.5, 2.0, 2.5]
-            '''
+            
             for var in scale_vector:                
                 # Calculate the orientation histogram
                 
@@ -188,11 +188,8 @@ def _create_feature_vector(im, patch_size = 8):
                 # Calculate the entropy.
                 #E = sum(H * log(H))
                 # Calculate Entropy using vader's function.
-                E = vader_entropy_function(imchunkY)
+                E = vader_entropy_function(imchunk)
                 fvector[-1].append(E)
-            '''
-            E = vader_entropy_function(imchunkY)
-            fvector[-1].append(E)
     return fvector
 
 def _create_graph(fvector, xdim, ydim, patch_size):
@@ -202,43 +199,40 @@ def _create_graph(fvector, xdim, ydim, patch_size):
 
     node_count = len(fvector)
     G = nx.Graph()
+    pos_vector = []
+    f = open('weight_dump.txt', 'w')
     for i in range(node_count):
-        #Cb, Cr, pos, e1, e2, e3, e4, e5 = fvector[i]
-        #G.add_node(i, Cb=Cb, Cr=Cr, pos=pos, e1=e1,
-        #           e2=e2,e3=e3,e4=e4,e5=e5)
-        Cb, Cr, pos, e = fvector[i]
-        G.add_node(i, Cb = Cb, Cr = Cr, pos = pos, e = e)
-        # To save time, create edges simultaneously.
+        Cb, Cr, pos, e1, e2, e3, e4, e5 = fvector[i]
+        G.add_node(i, Cb=Cb, Cr=Cr, pos=pos, e1=e1,
+                   e2=e2,e3=e3,e4=e4,e5=e5)
+        pos_vector.append(array({i:pos}))
+    for i in range(node_count):
+        for j in range(node_count):
+            Cb, Cr, pos, e1, e2, e3, e4, e5 = fvector[i]
+            node = G.node[j]
+            Cb0 = node['Cb']
+            Cr0 = node['Cr']
+            pos0 = node['pos']
+            e10 = node['e1']
+            e20 = node['e2']
+            e30 = node['e3']
+            e40 = node['e4']
+            e50 = node['e5']
+            # Create the differences vector
+            V = array([Cb0-Cb, Cr0-Cr, e1-e10,
+                       e2-e20, e3-e30, e4-e40, e5-e50])
+            #V = array([Cb0-Cb, Cr0-Cr, e1-e])
+            dist_max = hypot(xdim, ydim) * 1.0
+            dist = hypot(pos[0]-pos0[0], pos[1]-pos0[1])
 
-        if i == 0:
-            pass
-        else:
-            count = 0
-            for node in [d for n,d in G.nodes_iter(data=True)]:
-                Cb0 = node['Cb']
-                Cr0 = node['Cr']
-                pos0 = node['pos']
-                e1 = node['e']
-                #e20 = node['e2']
-                #e30 = node['e3']
-                #e40 = node['e4']
-                #e50 = node['e5']
-
-                # Create the differences vector
-                #V = array([Cb0-Cb, Cr0-Cr, e1-e10,
-                #           e2-e20, e3-e30, e4-e40, e5-e50])
-                V = array([Cb0-Cb, Cr0-Cr, e1-e])
-                dist_max = hypot(xdim, ydim) * 1.0
-                dist = hypot(pos[0]-pos0[0], pos[1]-pos0[1])
-
-                #weight = exp(-dot(V, V.T)) * log(dist_max/(1+dist))
-                #weight = exp(-dot(V, V.T)) * (1 - (dist/dist_max))
-                weight = exp(-dot(V, V.T))
-                #if weight > 10e-30:
-                if (dist < patch_size * sqrt(2.1)) and (weight > 10e-30):
-                    G.add_edge(i, count, weight=weight)
-                count += 1
-    return G
+            #weight = exp(-dot(V, V.T)) * log(dist_max/(1+dist))
+            #weight = exp(-dot(V, V.T)) * (1 - (dist/dist_max))
+            weight = int(exp(-dot(V, V.T)))
+            #if weight > 10e-30:
+            #if (dist < patch_size * 1.42):
+            G.add_edge(i, j, weight=weight)
+            f.write(str(i)+':'+str(j)+':'+str(weight)+'\n')
+    return G, pos_vector
 
 def create_graph(im, patch_size=8):
     '''
@@ -250,5 +244,11 @@ def create_graph(im, patch_size=8):
 
     return _create_graph(fvector, x, y, patch_size)
 if __name__ == '__main__':
-    im = imread('src/ball1.jpg')
-    t = im[:,:,0]
+    from scipy.cluster.vq import kmeans, vq, whiten
+    im = imread('src/mlogo.jpg')
+    im = _preprocess_image(im, 8)
+    fvector = _create_feature_vector(im)
+    f = array(fvector)
+    w = whiten(f)
+    book = array((w[0], w[2]))
+    c = kmeans(w, book)[0]
