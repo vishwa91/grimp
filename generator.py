@@ -227,7 +227,8 @@ def _create_graph(fvector, xdim, ydim, patch_size):
 
             #weight = exp(-dot(V, V.T)) * log(dist_max/(1+dist))
             #weight = exp(-dot(V, V.T)) * (1 - (dist/dist_max))
-            weight = int(exp(-dot(V, V.T)))
+            #weight = int(exp(-dot(V, V.T)))
+            weight = int(1 / (1 + dot(V, V.T)))
             #if weight > 10e-30:
             #if (dist < patch_size * 1.42):
             G.add_edge(i, j, weight=weight)

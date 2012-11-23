@@ -4,8 +4,8 @@ from generator import *
 from processor import *
 import metis
 
-patch_size = 6
-imname = 'src/microsoft.jpg'
+patch_size = 8
+imname = 'src/flower.jpg'
 im = imread(imname)
 imtemp = im.copy()
 print 'Starting graph processing'
