@@ -5,7 +5,7 @@ from processor import *
 import metis
 
 patch_size = 8
-imname = 'src/flower.jpg'
+imname = 'src/lone_bird.jpg'
 im = imread(imname)
 imtemp = im.copy()
 print 'Starting graph processing'
